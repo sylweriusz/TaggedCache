@@ -1,6 +1,8 @@
 <?php
 
-$cache = new \awr\TaggedMemCache();
+$cache = new TaggedMemCache();
+//or
+$cache = new TaggedRedisCache('192.168.1.34'); //redis server address
 
 //key for cache should be unique for given params
 $key  = md5("item name and unique params ".json_encode($params));
