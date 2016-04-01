@@ -18,11 +18,11 @@ class TaggedRedisCache
         $this->connect();
         if ($this->connected)
         {
-            $this->namespace = $this->cache->get("RKCNAMESPACE");
+            $this->namespace = $this->cache->get("RKC:NAMESPACE");
             if (!$this->namespace)
             {
                 $this->namespace = rand(1, 10000);
-                $this->cache->set("RKCNAMESPACE", $this->namespace);
+                $this->cache->set("RKC:NAMESPACE", $this->namespace);
             }
             $this->cleanTags();
         }
@@ -75,8 +75,8 @@ class TaggedRedisCache
             switch ($mode)
             {
                 case self::CLEANING_MODE_ALL:
-                    $this->cache->incr("RKCNAMESPACE");
-                    $this->namespace = $this->cache->get("RKCNAMESPACE");
+                    $this->cache->incr("RKC:NAMESPACE");
+                    $this->namespace = $this->cache->get("RKC:NAMESPACE");
                     break;
                 case self::CLEANING_MODE_MATCHING_TAG:
                 case self::CLEANING_MODE_MATCHING_ANY_TAG:
@@ -108,24 +108,24 @@ class TaggedRedisCache
 
         $hash_this = $this->prefix . '_key_' . $string . '_' . $tags_str . '_' . $tags_val;
 
-        $key = $this->namespace . ':' . rtrim(strtr(base64_encode(hash('tiger192,3', $hash_this, true)), '+/', '-_'), '=');
+        $key = 'RKC:' . $this->namespace . ':' . rtrim(strtr(base64_encode(hash('tiger192,3', $hash_this, true)), '+/', '-_'), '=');
 
         return $key;
     }
 
     private function incrementTag($tag)
     {
-        return $this->cache->hincrby("RKCK", $tag, 1);
+        return $this->cache->hincrby("RKC:TAGS", $tag, 1);
     }
 
 
     private function getTagValue($tag)
     {
-        $this->cache->hset("RKCKTIME", $tag, time());
+        $this->cache->hset("RKC:TIME", $tag, time());
 
-        if (!$newval = $this->cache->hget("RKCK", $tag))
+        if (!$newval = $this->cache->hget("RKC:TAGS", $tag))
         {
-            $this->cache->hset("RKCK", $tag, 1);
+            $this->cache->hset("RKC:TAGS", $tag, 1);
             $newval = 1;
         }
 
@@ -136,10 +136,10 @@ class TaggedRedisCache
     {
         if ($this->connected)
         {
-            if (!$this->cache->exists("RKCKFRESH"))
+            if (!$this->cache->exists("RKC:REFRESH"))
             {
-                $this->cache->setex("RKCKFRESH", 7200, 1);
-                $keys = $this->cache->hgetall("RKCKTIME");
+                $this->cache->setex("RKC:REFRESH", 7200, 1);
+                $keys = $this->cache->hgetall("RKC:TIME");
                 if (is_array($keys) && count($keys))
                 {
                     foreach ($keys as $key => $time)
@@ -147,8 +147,8 @@ class TaggedRedisCache
                         $age = time() - $time;
                         if ($age > 86400)
                         {
-                            $this->cache->hdel("RKCKTIME", $key);
-                            $this->cache->hdel("RKCK", $key);
+                            $this->cache->hdel("RKC:TIME", $key);
+                            $this->cache->hdel("RKC:TAGS", $key);
                         }
                     }
                 }
