@@ -3,7 +3,7 @@ TaggedCache
 Cache with tags, fast delete
 
 TaggedMemCache Class - cache based on MemCache
-
+TaggedRedisCache Class - cache based on Redis (phpredis with fallback to predis)
 
 usage example: 
 
