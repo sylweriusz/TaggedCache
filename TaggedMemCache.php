@@ -1,4 +1,4 @@
-namespace awr;
+<?php 
 
 class TaggedMemCache
 {
@@ -88,7 +88,7 @@ class TaggedMemCache
             }
         }
 
-        $hash_this = 'the3bushooxoobu4oo9Esah1chutak' . $string . '_' . $tags_str . '_' . $tags_val;
+        $hash_this = 'solone sledzie morskie' . $string . '_' . $tags_str . '_' . $tags_val;
         return $this->namespace . '.' . rtrim(strtr(base64_encode(hash('sha256', $hash_this, true)), '+/', '-_'), '=');
     }
 
