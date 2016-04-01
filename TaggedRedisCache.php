@@ -32,9 +32,18 @@ class TaggedRedisCache
     {
         if (!$this->connected)
         {
-            $this->cache     = new \Redis();
-            $this->connected = $this->cache->pconnect($this->server, 6379);
-            $this->cache->setOption(\Redis::OPT_SERIALIZER, \Redis::SERIALIZER_NONE);
+
+            if (class_exists("\\Redis"))
+            {
+                $this->cache     = new \Redis();
+                $this->connected = $this->cache->pconnect($this->server, 6379);
+                $this->cache->setOption(\Redis::OPT_SERIALIZER, \Redis::SERIALIZER_NONE);
+            }
+            else
+            {
+                $this->cache = new \Predis\Client('tcp://'.$this->server.':6379');
+                $this->connected = $this->cache->connect();
+            }
             $this->cache->select(0);
         }
     }
