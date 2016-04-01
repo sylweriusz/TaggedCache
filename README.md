@@ -30,4 +30,4 @@ usage example:
     
     //if one of $params get changed do somethink like this
     
-    $cache->clean('matchingTag',['tag_for_delete']);
+    $cache->clean('matchingAnyTag',['tag_for_delete']);
