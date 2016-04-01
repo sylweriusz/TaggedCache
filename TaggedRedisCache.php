@@ -140,7 +140,7 @@ class TaggedRedisCache
         return $newval;
     }
 
-    public function cleanTags()
+    private function cleanTags()
     {
         if ($this->connected)
         {
