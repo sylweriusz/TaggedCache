@@ -9,10 +9,12 @@ class TaggedMemCache
     private $memcached = false;
     private $namespace = false;
     private $keys = array(); //keys version internal cache
+    private $server = '';
 
-    public function __construct()
+    public function __construct($server = '127.0.0.1')
     {
         $this->connect();
+        $this->server = $server;
         $this->namespace = $this->memcached->get("keymemcache.namespace.key.beware");
         if ($this->namespace === false)
         {
@@ -30,7 +32,7 @@ class TaggedMemCache
             $this->memcached->setOption(Memcached::OPT_COMPRESSION, true);
             if (count($this->memcached->getServerList()) < 1)
             {
-                $this->memcached->addServer('127.0.0.1', 11211, 33);
+                $this->memcached->addServer($this->server, 11211, 33);
             }
         }
     }
