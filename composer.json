@@ -3,7 +3,7 @@
     "description": "Cache (redis or memcache), fast delete, optionally based on tags",
     "license": "GPL-2.0",
     "require": {
-        "php": ">=5.3.0"
+        "php": ">=5.5.0"
     },
     "autoload": {
 		"files": ["TaggedRedisCache.php", "TaggedMemCache.php"]
