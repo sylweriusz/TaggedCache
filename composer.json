@@ -11,7 +11,7 @@
         }
     ],
     "license": "GPL-2.0",
-    "minimum-stability": "dev-master",
+    "minimum-stability": "stable",
     "require": {
         "php": ">=5.5.0",
         "predis/predis": "^1.0"
