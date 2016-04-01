@@ -2,6 +2,7 @@
     "name": "sylweriusz/taggedcache",
     "description": "Cache (redis or memcache), fast delete, optionally based on tags",
     "license": "GPL-2.0",
+    "minimum-stability": "dev-master"
     "require": {
         "php": ">=5.5.0"
     },
