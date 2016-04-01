@@ -11,9 +11,10 @@
         }
     ],
     "license": "GPL-2.0",
-    "minimum-stability": "dev",
+    "minimum-stability": "dev-master",
     "require": {
-        "php": ">=5.5.0"
+        "php": ">=5.5.0",
+        "predis/predis": "^1.0"
     },
     "autoload": {
 		"files": ["TaggedRedisCache.php", "TaggedMemCache.php"]
