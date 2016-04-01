@@ -43,7 +43,7 @@ class TaggedRedisCache
                 $this->cache = new \Predis\Client('tcp://'.$this->server.':6379');
                 $this->connected = $this->cache->ping("connected");
             }
-                $this->cache->select(0);
+            $this->cache->select(0);
         }
     }
 
