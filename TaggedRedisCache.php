@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Class TaggedRedisCache
+ */
 class TaggedRedisCache
 {
     const CLEANING_MODE_ALL = 'all';
@@ -12,6 +15,11 @@ class TaggedRedisCache
     private $namespace = false;
     private $prefix = '';
 
+    /**
+     * TaggedRedisCache constructor.
+     *
+     * @param string $server // ip of a redis server
+     */
     public function __construct($server)
     {
         $this->server = $server;
@@ -40,25 +48,43 @@ class TaggedRedisCache
             }
             else
             {
-                $this->cache = new \Predis\Client('tcp://'.$this->server.':6379');
+                $this->cache     = new \Predis\Client('tcp://' . $this->server . ':6379');
                 $this->connected = $this->cache->ping("connected");
             }
             $this->cache->select(0);
         }
     }
 
-    public function save($data, $key, $tags = null, $timeout = 3600)
+    /**
+     * Save variable in cache
+     *
+     * @param mixed  $data    // variable to store
+     * @param string $key     // unique key
+     * @param array  $tags    // array of tags for simple delete of key groups
+     * @param int    $timeout // timeout in seconds
+     *
+     * @return string "+OK\r\n" or "-Error message\r\n" etc
+     */
+    public function save($data, $key, $tags = [], $timeout = 3600)
     {
         if ($this->connected)
         {
             $key        = $this->genkey($key, $tags);
-            $compressed = gzcompress(serialize($data), 9);
+            $compressed = gzcompress(json_encode($data, JSON_UNESCAPED_UNICODE), 9);
 
             return $this->cache->setex($key, $timeout, $compressed);
         }
     }
 
-    public function load($key, $tags = null)
+    /**
+     * Try load Variable from Cache
+     *
+     * @param string $key  // unique key
+     * @param array  $tags // array of tags for simple delete of key groups
+     *
+     * @return bool|mixed
+     */
+    public function load($key, $tags = [])
     {
         if ($this->connected)
         {
@@ -67,7 +93,7 @@ class TaggedRedisCache
 
             if ($dane)
             {
-                return unserialize(gzuncompress($dane));
+                return json_decode(gzuncompress($dane), true);
             }
             else
             {
@@ -76,6 +102,12 @@ class TaggedRedisCache
         }
     }
 
+    /**
+     * Clean whole Cache or tag group
+     *
+     * @param       $mode // one of 'all', 'matchingTag', 'matchingAnyTag'
+     * @param array $tags // tag or tags
+     */
     public function clean($mode, $tags = [])
     {
         if ($this->connected)
@@ -114,9 +146,9 @@ class TaggedRedisCache
             }
         }
 
-        $hash_this = $this->prefix . '_key_' . $string . '_' . $tags_str . '_' . $tags_val;
+        $hash_this = $this->prefix . '_keys_' . $string . '_' . $tags_str . '_' . $tags_val;
 
-        $key = 'RKC:' . $this->namespace . ':' . rtrim(strtr(base64_encode(hash('tiger192,3', $hash_this, true)), '+/', '-_'), '=');
+        $key = 'RKC:' . $this->namespace . ':' . rtrim(strtr(base64_encode(hash('sha256', $hash_this, true)), '+/', '-_'), '=');
 
         return $key;
     }
@@ -164,9 +196,14 @@ class TaggedRedisCache
         }
     }
 
+    /**
+     * Set prefix, for cache separation in some scenarios
+     *
+     * @param string $prefix
+     */
     public function setPrefix($prefix)
     {
-        $this->prefix = $prefix;
+        $this->prefix = (string)$prefix;
     }
 
 }
