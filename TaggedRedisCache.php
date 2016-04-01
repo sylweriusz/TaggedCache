@@ -32,7 +32,6 @@ class TaggedRedisCache
     {
         if (!$this->connected)
         {
-
             if (class_exists("\\Redis"))
             {
                 $this->cache     = new \Redis();
@@ -42,9 +41,9 @@ class TaggedRedisCache
             else
             {
                 $this->cache = new \Predis\Client('tcp://'.$this->server.':6379');
-                $this->connected = $this->cache->connect();
+                $this->connected = $this->cache->ping("connected");
             }
-            $this->cache->select(0);
+                $this->cache->select(0);
         }
     }
 
