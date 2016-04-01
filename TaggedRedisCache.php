@@ -1,6 +1,6 @@
 <?php
 
-class RKeyCache
+class TaggedRedisCache
 {
     const CLEANING_MODE_ALL = 'all';
     const CLEANING_MODE_MATCHING_TAG = 'matchingTag';
