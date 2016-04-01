@@ -17,6 +17,8 @@
         "predis/predis": "^1.0"
     },
     "autoload": {
-		"files": ["TaggedRedisCache.php", "TaggedMemCache.php"]
+        "psr-0": {
+            "\\TaggedCache\\": "src/"
+        }
 	}
 }

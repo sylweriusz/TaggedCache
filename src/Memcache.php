@@ -1,6 +1,8 @@
-<?php 
+<?php
 
-class TaggedMemCache
+namespace TaggedCache;
+
+class Memcache
 {
     const CLEANING_MODE_ALL = 'all';
     const CLEANING_MODE_MATCHING_TAG = 'matchingTag';

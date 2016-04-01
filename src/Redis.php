@@ -1,9 +1,11 @@
 <?php
 
+namespace TaggedCache;
+
 /**
  * Class TaggedRedisCache
  */
-class TaggedRedisCache
+class Redis
 {
     const CLEANING_MODE_ALL = 'all';
     const CLEANING_MODE_MATCHING_TAG = 'matchingTag';

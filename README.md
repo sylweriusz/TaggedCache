@@ -2,17 +2,17 @@ TaggedCache
 ==============
 Cache with tags, fast delete
 
-TaggedMemCache Class - cache based on MemCache
+\TaggedCache\Memcache Class - cache based on Memcache
 
-TaggedRedisCache Class - cache based on Redis (phpredis with fallback to predis)
+\TaggedCache\Redis Class - cache based on Redis (phpredis with fallback to predis)
 
 usage example: 
 
-    $cache = new TaggedMemCache();
-    
+    $cache = new \TaggedCache\Memcache();
+
     //or
-    
-    $cache = new TaggedRedisCache('192.168.1.34'); //redis server address
+
+    $cache = new \TaggedCache\Redis('192.168.1.34'); //redis server address
     
     //key for cache should be unique for given params
     
