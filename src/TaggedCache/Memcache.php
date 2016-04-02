@@ -101,10 +101,7 @@ class Memcache implements BasicCache
 
     private function incrementTag($tag)
     {
-        $this->getTagValue($tag);
-        $this->memcached->increment("TCM:key:" . $tag);
-
-        return $this->memcached->get("TCM:key:" . $tag);
+        return $this->memcached->increment("TCM:key:" . $tag);
     }
 
 
