@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: sszydlik
- * Date: 02.04.16
- * Time: 02:37
- */
 
 namespace TaggedCache;
 
