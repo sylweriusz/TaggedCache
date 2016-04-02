@@ -2,7 +2,7 @@
 
 namespace TaggedCache;
 
-class Memcache
+class Memcache implements BasicCache
 {
     const CLEANING_MODE_ALL = 'all';
     const CLEANING_MODE_MATCHING_TAG = 'matchingTag';
@@ -12,6 +12,7 @@ class Memcache
     private $namespace = false;
     private $keys = array(); //keys version internal cache
     private $server = '';
+    private $prefix = '';
 
     public function __construct($server = '127.0.0.1')
     {
@@ -39,7 +40,7 @@ class Memcache
         }
     }
 
-    public function save($data, $key, $tags = null, $timeout = 3600)
+    public function save($data, $key, $tags = [], $timeout = 3600)
     {
         if (count($tags))
         {
@@ -48,7 +49,7 @@ class Memcache
         return $this->memcached->set($key, $data, $timeout);
     }
 
-    public function load($key, $tags = null)
+    public function load($key, $tags = [])
     {
         if (count($tags))
         {
@@ -57,7 +58,7 @@ class Memcache
         return $this->memcached->get($key);
     }
 
-    public function clean($mode, $tags = array())
+    public function clean($mode, $tags = [])
     {
         switch ($mode)
         {
@@ -92,7 +93,7 @@ class Memcache
             }
         }
 
-        $hash_this = 'solone sledzie morskie' . $string . '_' . $tags_str . '_' . $tags_val;
+        $hash_this = $this->prefix . '_keys_' . $string . '_' . $tags_str . '_' . $tags_val;
         return $this->namespace . '.' . rtrim(strtr(base64_encode(hash('sha256', $hash_this, true)), '+/', '-_'), '=');
     }
 
@@ -118,4 +119,13 @@ class Memcache
         return $this->keys[$tag];
     }
 
+    /**
+     * Set prefix, for cache separation in some scenarios
+     *
+     * @param string $prefix
+     */
+    public function prefix($prefix)
+    {
+        $this->prefix = (string)$prefix;
+    }
 }

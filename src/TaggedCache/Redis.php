@@ -5,16 +5,16 @@ namespace TaggedCache;
 /**
  * Class TaggedRedisCache
  */
-class Redis
+class Redis implements BasicCache
 {
     const CLEANING_MODE_ALL = 'all';
     const CLEANING_MODE_MATCHING_TAG = 'matchingTag';
     const CLEANING_MODE_MATCHING_ANY_TAG = 'matchingAnyTag';
 
     private $cache = false;
-    private $server = false;
     private $connected = false;
     private $namespace = false;
+    private $server = '';
     private $prefix = '';
 
     /**
@@ -203,7 +203,7 @@ class Redis
      *
      * @param string $prefix
      */
-    public function setPrefix($prefix)
+    public function prefix($prefix)
     {
         $this->prefix = (string)$prefix;
     }

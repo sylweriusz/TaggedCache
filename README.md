@@ -22,7 +22,7 @@ $tags = ['tag_for_delete'];
 
 //try from cache, and save if not exists
 if (!$result = $cache->load($key, $tags)){
-    $result = \Get_Data::result($params); // just fill $result with computed data
+    $result = json_encode($params); // anything time consuming what You want to do with $params
     $cache->save($result, $key, $tags, 1200); //remember this for 1200 sec
 }
 ```
