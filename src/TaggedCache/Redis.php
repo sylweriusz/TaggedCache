@@ -22,7 +22,7 @@ class Redis implements BasicCache
      *
      * @param string $server // ip of a redis server
      */
-    public function __construct($server)
+    public function __construct($server = '127.0.0.1')
     {
         $this->server = $server;
         $this->connect();

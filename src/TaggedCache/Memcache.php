@@ -10,19 +10,18 @@ class Memcache implements BasicCache
 
     private $memcached = false;
     private $namespace = false;
-    private $keys = array(); //keys version internal cache
     private $server = '';
     private $prefix = '';
 
     public function __construct($server = '127.0.0.1')
     {
         $this->connect();
-        $this->server = $server;
-        $this->namespace = $this->memcached->get("keymemcache.namespace.key.beware");
+        $this->server    = $server;
+        $this->namespace = $this->memcached->get("TCM:namespace");
         if ($this->namespace === false)
         {
             $this->namespace = rand(1, 10000);
-            $this->memcached->set("keymemcache.namespace.key.beware", $this->namespace);
+            $this->memcached->set("TCM:namespace", $this->namespace);
         }
     }
 
@@ -42,20 +41,22 @@ class Memcache implements BasicCache
 
     public function save($data, $key, $tags = [], $timeout = 3600)
     {
-        if (count($tags))
+        if ($this->memcached)
         {
             $key = $this->genkey($key, $tags);
+
+            return $this->memcached->set($key, $data, $timeout);
         }
-        return $this->memcached->set($key, $data, $timeout);
     }
 
     public function load($key, $tags = [])
     {
-        if (count($tags))
+        if ($this->memcached)
         {
             $key = $this->genkey($key, $tags);
+
+            return $this->memcached->get($key);
         }
-        return $this->memcached->get($key);
     }
 
     public function clean($mode, $tags = [])
@@ -63,23 +64,23 @@ class Memcache implements BasicCache
         switch ($mode)
         {
             case self::CLEANING_MODE_ALL:
-                $this->memcached->increment("keymemcache.namespace.key.beware");
-                $this->namespace = $this->memcached->get("keymemcache.namespace.key.beware");
+                $this->memcached->increment("TCM:namespace");
+                $this->namespace = $this->memcached->get("TCM:namespace");
                 break;
             case self::CLEANING_MODE_MATCHING_TAG:
             case self::CLEANING_MODE_MATCHING_ANY_TAG:
-            if (count($tags))
-            {
-                foreach ($tags as $tag)
+                if (count($tags))
                 {
-                    $this->incrementTag($tag);
+                    foreach ($tags as $tag)
+                    {
+                        $this->incrementTag($tag);
+                    }
                 }
-            }
                 break;
         }
     }
 
-    private function genkey($string, $tags = array())
+    private function genkey($string, $tags = [])
     {
         $tags_str = '_';
         $tags_val = 0;
@@ -94,29 +95,29 @@ class Memcache implements BasicCache
         }
 
         $hash_this = $this->prefix . '_keys_' . $string . '_' . $tags_str . '_' . $tags_val;
-        return $this->namespace . '.' . rtrim(strtr(base64_encode(hash('sha256', $hash_this, true)), '+/', '-_'), '=');
+
+        return 'TCM:' . $this->namespace . ':' . rtrim(strtr(base64_encode(hash('sha256', $hash_this, true)), '+/', '-_'), '=');
     }
 
     private function incrementTag($tag)
     {
         $this->getTagValue($tag);
-        $this->memcached->increment("keymemcache_key_" . $tag);
-        return $this->keys[$tag] = $this->memcached->get("keymemcache_key_" . $tag);
+        $this->memcached->increment("TCM:key:" . $tag);
+
+        return $this->memcached->get("TCM:key:" . $tag);
     }
 
 
     private function getTagValue($tag)
     {
-        if (!$this->keys[$tag])
+        $thistag = $this->memcached->get("TCM:key:" . $tag);
+        if (!$thistag)
         {
-            $this->keys[$tag] = $this->memcached->get("keymemcache_key_" . $tag);
+            $this->memcached->set("TCM:key:" . $tag, 1, 90000);
+            $thistag = 1;
         }
-        if (!$this->keys[$tag])
-        {
-            $this->memcached->set("keymemcache_key_" . $tag, 1, 90000);
-            $this->keys[$tag] = 1;
-        }
-        return $this->keys[$tag];
+
+        return $thistag;
     }
 
     /**
