@@ -61,22 +61,25 @@ class Memcache implements BasicCache
 
     public function clean($mode, $tags = [])
     {
-        switch ($mode)
+        if ($this->memcached)
         {
-            case self::CLEANING_MODE_ALL:
-                $this->memcached->increment("TCM:namespace");
-                $this->namespace = $this->memcached->get("TCM:namespace");
-                break;
-            case self::CLEANING_MODE_MATCHING_TAG:
-            case self::CLEANING_MODE_MATCHING_ANY_TAG:
-                if (count($tags))
-                {
-                    foreach ($tags as $tag)
+            switch ($mode)
+            {
+                case self::CLEANING_MODE_ALL:
+                    $this->memcached->increment("TCM:namespace");
+                    $this->namespace = $this->memcached->get("TCM:namespace");
+                    break;
+                case self::CLEANING_MODE_MATCHING_TAG:
+                case self::CLEANING_MODE_MATCHING_ANY_TAG:
+                    if (count($tags))
                     {
-                        $this->incrementTag($tag);
+                        foreach ($tags as $tag)
+                        {
+                            $this->incrementTag($tag);
+                        }
                     }
-                }
-                break;
+                    break;
+            }
         }
     }
 
