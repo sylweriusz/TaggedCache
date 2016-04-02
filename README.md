@@ -9,7 +9,7 @@ composer require sylweriusz/taggedcache
 ```
 
 ### Initialization
-Simple initialization:
+
 ```php
 $cache = new \TaggedCache\Memcache('127.0.0.1'); //memcache server address
 //or
