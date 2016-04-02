@@ -15,7 +15,7 @@
       "role": "Developer"
     }
   ],
-  "license": "GPL-2.0",
+  "license": "GPL-3.0",
   "minimum-stability": "stable",
   "require": {
     "php": ">=5.5.0",
