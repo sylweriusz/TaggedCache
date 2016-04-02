@@ -1,6 +1,7 @@
 TaggedCache
 ==============
-Cache with tags, fast delete
+Very simple caching, optionally with tags for fast delete of some key groups.
+
 
 ### Installation with composer
 ```
