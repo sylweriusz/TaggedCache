@@ -2,9 +2,6 @@
 
 namespace TaggedCache;
 
-/**
- * Class TaggedRedisCache
- */
 class Redis implements BasicCache
 {
     const CLEANING_MODE_ALL = 'all';
