@@ -1,24 +1,29 @@
 {
-    "name": "sylweriusz/taggedcache",
-    "description": "Cache (redis or memcache), fast delete, optionally based on tags",
-    "keywords": ["cache","tags","redis","memcache"],
-    "authors": [
-        {
-            "name": "Sylweriusz Szydlik",
-            "email": "sylweriusz@gmail.com",
-            "homepage": "http://sylweriusz.szydlik.com",
-            "role": "Developer"
-        }
-    ],
-    "license": "GPL-2.0",
-    "minimum-stability": "stable",
-    "require": {
-        "php": ">=5.5.0",
-        "predis/predis": "^1.0"
-    },
-    "autoload": {
-        "psr-0": {
-            "TaggedCache\\": "src/"
-        }
-	}
+  "name": "sylweriusz/taggedcache",
+  "description": "Cache (redis or memcache), fast delete, optionally based on tags",
+  "keywords": [
+    "cache",
+    "tags",
+    "redis",
+    "memcache"
+  ],
+  "authors": [
+    {
+      "name": "Sylweriusz Szydlik",
+      "email": "sylweriusz@gmail.com",
+      "homepage": "http://sylweriusz.szydlik.com",
+      "role": "Developer"
+    }
+  ],
+  "license": "GPL-2.0",
+  "minimum-stability": "stable",
+  "require": {
+    "php": ">=5.5.0",
+    "predis/predis": "^1.0"
+  },
+  "autoload": {
+    "psr-0": {
+      "TaggedCache\\": "src/"
+    }
+  }
 }
