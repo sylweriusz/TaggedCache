@@ -147,8 +147,7 @@ class Redis implements BasicCache
 
         $hash_this = $this->prefix . '_keys_' . $string . '_' . $tags_str . '_' . $tags_val;
 
-        $key = 'RKC:' . $this->namespace . ':' . rtrim(strtr(base64_encode(hash('sha256', $hash_this, true)), '+/', '-_'), '=');
-
+        $key = 'RKC:' . $this->namespace . ':' . hash('tiger192,3', $hash_this);
         return $key;
     }
 
