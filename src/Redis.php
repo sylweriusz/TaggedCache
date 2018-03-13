@@ -2,6 +2,9 @@
 
 namespace TaggedCache;
 
+/**
+ * Class TaggedRedisCache
+ */
 class Redis implements BasicCache
 {
     const CLEANING_MODE_ALL = 'all';
@@ -13,6 +16,8 @@ class Redis implements BasicCache
     private $namespace = false;
     private $server = '';
     private $prefix = '';
+    private $delayedKeys = ['element', 'elements', 'layout', 'thumb'];
+    private $delayedKeysTtl = 200;
 
     /**
      * TaggedRedisCache constructor.
@@ -23,34 +28,48 @@ class Redis implements BasicCache
     {
         $this->server = $server;
         $this->connect();
-        if ($this->connected)
-        {
+        if ($this->connected) {
             $this->namespace = $this->cache->get("RKC:NAMESPACE");
-            if (!$this->namespace)
-            {
-                $this->namespace = rand(1, 10000);
+            if (!$this->namespace) {
+                $this->namespace = random_int(1, 10000);
                 $this->cache->set("RKC:NAMESPACE", $this->namespace);
             }
-            $this->cleanTags();
         }
     }
 
     private function connect()
     {
-        if (!$this->connected)
-        {
-            if (class_exists("\\Redis"))
-            {
-                $this->cache     = new \Redis();
-                $this->connected = $this->cache->pconnect($this->server, 6379);
-                $this->cache->setOption(\Redis::OPT_SERIALIZER, \Redis::SERIALIZER_NONE);
+        if (!$this->connected) {
+            if (class_exists("\\Redis")) {
+                try {
+                    if (is_array($this->server) && count($this->server)) {
+                        $this->cache = new \RedisArray($this->server, ["lazy_connect" => true]);
+                        $this->connected = true;
+                    } else {
+                        $this->cache = new \Redis();
+                        $this->connected = $this->cache->connect($this->server, 6379);
+//                    $this->cache->setOption(\Redis::OPT_SERIALIZER, \Redis::SERIALIZER_NONE);
+                    }
+                    $this->cache->select(1);
+                } catch (\RedisException $e) {
+                    $this->connected = false;
+                }
+            } else {
+                if (is_array($this->server) && count($this->server)) {
+                    foreach ($this->server as $item) {
+                        $server[] = 'tcp://' . $item . ':6379&database=1';
+                    }
+                } else {
+                    $server = 'tcp://' . $this->server . ':6379&database=1';
+                }
+                try {
+                    $this->cache = new \Predis\Client($server);
+                    $this->connected = true;
+                } catch (\Predis\CommunicationException $e) {
+                    $this->connected = false;
+                }
             }
-            else
-            {
-                $this->cache     = new \Predis\Client('tcp://' . $this->server . ':6379');
-                $this->connected = $this->cache->ping("connected");
-            }
-            $this->cache->select(0);
+
         }
     }
 
@@ -66,9 +85,8 @@ class Redis implements BasicCache
      */
     public function save($data, $key, $tags = [], $timeout = 3600)
     {
-        if ($this->connected)
-        {
-            $key        = $this->genkey($key, $tags);
+        if ($this->connected) {
+            $key = $this->genkey($key, $tags);
             $compressed = gzcompress(json_encode($data, JSON_UNESCAPED_UNICODE), 9);
 
             return $this->cache->setex($key, $timeout, $compressed);
@@ -85,17 +103,13 @@ class Redis implements BasicCache
      */
     public function load($key, $tags = [])
     {
-        if ($this->connected)
-        {
-            $key  = $this->genkey($key, $tags);
+        if ($this->connected) {
+            $key = $this->genkey($key, $tags);
             $dane = $this->cache->get($key);
 
-            if ($dane)
-            {
+            if ($dane) {
                 return json_decode(gzuncompress($dane), true);
-            }
-            else
-            {
+            } else {
                 return false;
             }
         }
@@ -109,21 +123,20 @@ class Redis implements BasicCache
      */
     public function clean($mode, $tags = [])
     {
-        if ($this->connected)
-        {
-            switch ($mode)
-            {
+        if ($this->connected) {
+            switch ($mode) {
                 case self::CLEANING_MODE_ALL:
                     $this->cache->incr("RKC:NAMESPACE");
                     $this->namespace = $this->cache->get("RKC:NAMESPACE");
                     break;
                 case self::CLEANING_MODE_MATCHING_TAG:
                 case self::CLEANING_MODE_MATCHING_ANY_TAG:
-                    if (count($tags))
-                    {
-                        foreach ($tags as $tag)
-                        {
+                    if (count($tags)) {
+                        foreach ($tags as $tag) {
                             $this->incrementTag($tag);
+                            if (in_array($tag, $this->delayedKeys)) {
+                                $this->cache->setex("RKC:D:" . $tag, $this->delayedKeysTtl, 1);
+                            }
                         }
                     }
                     break;
@@ -135,11 +148,17 @@ class Redis implements BasicCache
     {
         $tags_str = '_';
         $tags_val = 0;
-        if (is_array($tags) && count($tags))
-        {
+        if (is_array($tags) && count($tags)) {
             asort($tags);
-            foreach ($tags as $tag)
-            {
+            foreach ($tags as $tag) {
+                if (in_array($tag, $this->delayedKeys)) {
+                    if ($this->cache->get("RKC:D:" . $tag)) {
+                        if (!$this->cache->get("RKC:T:" . $tag)) {
+                            $this->cache->setex("RKC:T:" . $tag, 49, 1);
+                            $this->incrementTag($tag);
+                        }
+                    }
+                }
                 $tags_str = $tags_str . '_' . $tag;
                 $tags_val = $tags_val . '_' . $this->getTagValue($tag);
             }
@@ -153,45 +172,29 @@ class Redis implements BasicCache
 
     private function incrementTag($tag)
     {
-        return $this->cache->hincrby("RKC:TAGS", $tag, 1);
+        $tag = $this->prepare_tag($tag);
+
+        return $this->cache->incr("RKC:TAGS:" . $tag);
     }
 
 
     private function getTagValue($tag)
     {
-        $this->cache->hset("RKC:TIME", $tag, time());
+        $tag = $this->prepare_tag($tag);
 
-        if (!$newval = $this->cache->hget("RKC:TAGS", $tag))
-        {
-            $this->cache->hset("RKC:TAGS", $tag, 1);
+        if (!$newval = $this->cache->get("RKC:TAGS:" . $tag)) {
+            $this->cache->setex("RKC:TAGS:" . $tag, 199999, 1);
             $newval = 1;
+        } else {
+            $this->cache->expire("RKC:TAGS:" . $tag, 199999);
         }
 
         return $newval;
     }
 
-    private function cleanTags()
+    private function prepare_tag($tag)
     {
-        if ($this->connected)
-        {
-            if (!$this->cache->exists("RKC:REFRESH"))
-            {
-                $this->cache->setex("RKC:REFRESH", 7200, 1);
-                $keys = $this->cache->hgetall("RKC:TIME");
-                if (is_array($keys) && count($keys))
-                {
-                    foreach ($keys as $key => $time)
-                    {
-                        $age = time() - $time;
-                        if ($age > 86400)
-                        {
-                            $this->cache->hdel("RKC:TIME", $key);
-                            $this->cache->hdel("RKC:TAGS", $key);
-                        }
-                    }
-                }
-            }
-        }
+        return str_replace(":", ".", $tag);
     }
 
     /**
@@ -204,5 +207,14 @@ class Redis implements BasicCache
         $this->prefix = (string)$prefix;
     }
 
+    public function getInstance()
+    {
+        if ($this->connected) {
+            return $this->cache;
+        } else {
+            return false;
+        }
+
+    }
 }
 
