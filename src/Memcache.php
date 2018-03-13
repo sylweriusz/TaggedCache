@@ -99,7 +99,7 @@ class Memcache implements BasicCache
 
         $hash_this = $this->prefix . '_keys_' . $string . '_' . $tags_str . '_' . $tags_val;
 
-        return 'TCM:' . $this->namespace . ':' . rtrim(strtr(base64_encode(hash('sha256', $hash_this, true)), '+/', '-_'), '=');
+        return 'TCM:' . $this->namespace . ':' . hash('tiger192,3', $hash_this);
     }
 
     private function incrementTag($tag)
