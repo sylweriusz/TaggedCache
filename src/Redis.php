@@ -7,16 +7,18 @@ namespace TaggedCache;
  */
 class Redis implements BasicCache
 {
-    const CLEANING_MODE_ALL = 'all';
+    const CLEANING_MODE_ALL = 'all'; //very fast, doesn't clear memory
+    const CLEANING_MODE_CLEAR = 'clear';
+    const CLEANING_MODE_CLEAR_ALL = 'clearAll';
     const CLEANING_MODE_MATCHING_TAG = 'matchingTag';
     const CLEANING_MODE_MATCHING_ANY_TAG = 'matchingAnyTag';
+    const DELAYED_KEYS = ['element', 'elements', 'layout', 'thumb'];
 
     private $cache = false;
     private $connected = false;
     private $namespace = false;
-    private $server = '';
+    private $server ;
     private $prefix = '';
-    private $delayedKeys = ['element', 'elements', 'layout', 'thumb'];
     private $delayedKeysTtl = 200;
 
     /**
@@ -28,49 +30,31 @@ class Redis implements BasicCache
     {
         $this->server = $server;
         $this->connect();
-        if ($this->connected) {
-            $this->namespace = $this->cache->get("RKC:NAMESPACE");
-            if (!$this->namespace) {
-                $this->namespace = random_int(1, 10000);
-                $this->cache->set("RKC:NAMESPACE", $this->namespace);
+        if ($this->connected)
+        {
+            $this->namespace = $this->cache->get('RKC:NAMESPACE');
+            if (!$this->namespace)
+            {
+                $this->namespace = 1;
+                $this->cache->set('RKC:NAMESPACE', $this->namespace);
             }
         }
     }
 
     private function connect()
     {
-        if (!$this->connected) {
-            if (class_exists("\\Redis")) {
-                try {
-                    if (is_array($this->server) && count($this->server)) {
-                        $this->cache = new \RedisArray($this->server, ["lazy_connect" => true]);
-                        $this->connected = true;
-                    } else {
-                        $this->cache = new \Redis();
-                        $this->connected = $this->cache->connect($this->server, 6379);
-//                    $this->cache->setOption(\Redis::OPT_SERIALIZER, \Redis::SERIALIZER_NONE);
-                    }
-                    $this->cache->select(1);
-                } catch (\RedisException $e) {
-                    $this->connected = false;
-                }
-            } else {
-                if (is_array($this->server) && count($this->server)) {
-                    foreach ($this->server as $item) {
-                        $server[] = 'tcp://' . $item . ':6379&database=1';
-                    }
-                } else {
-                    $server = 'tcp://' . $this->server . ':6379&database=1';
-                }
-                try {
-                    $this->cache = new \Predis\Client($server);
-                    $this->connected = true;
-                } catch (\Predis\CommunicationException $e) {
-                    $this->connected = false;
-                }
-            }
-
+        if (\is_array($this->server) && \count($this->server))
+        {
+            $this->cache = new \RedisArray($this->server, ['lazy_connect' => true, 'connect_timeout' => 0.5, 'read_timeout' => 0.5]);
+            $this->connected = true;
         }
+        else
+        {
+            $this->cache = new \Redis();
+            $this->connected = $this->cache->connect($this->server, 6379, 0.5);
+        }
+        $this->cache->setOption(\Redis::OPT_SERIALIZER, \Redis::SERIALIZER_NONE);
+        $this->cache->select(4);
     }
 
     /**
@@ -85,8 +69,9 @@ class Redis implements BasicCache
      */
     public function save($data, $key, $tags = [], $timeout = 3600)
     {
-        if ($this->connected) {
-            $key = $this->genkey($key, $tags);
+        if ($this->connected)
+        {
+            $key = $this->genKey($key, $tags);
             $compressed = gzcompress(json_encode($data, JSON_UNESCAPED_UNICODE), 9);
 
             return $this->cache->setex($key, $timeout, $compressed);
@@ -103,15 +88,16 @@ class Redis implements BasicCache
      */
     public function load($key, $tags = [])
     {
-        if ($this->connected) {
-            $key = $this->genkey($key, $tags);
+        if ($this->connected)
+        {
+            $key = $this->genKey($key, $tags);
             $dane = $this->cache->get($key);
 
-            if ($dane) {
+            if ($dane)
+            {
                 return json_decode(gzuncompress($dane), true);
-            } else {
-                return false;
             }
+        return false;
         }
     }
 
@@ -123,19 +109,30 @@ class Redis implements BasicCache
      */
     public function clean($mode, $tags = [])
     {
-        if ($this->connected) {
-            switch ($mode) {
+        if ($this->connected)
+        {
+            switch ($mode)
+            {
                 case self::CLEANING_MODE_ALL:
-                    $this->cache->incr("RKC:NAMESPACE");
-                    $this->namespace = $this->cache->get("RKC:NAMESPACE");
+                    $this->cache->incr('RKC:NAMESPACE');
+                    $this->namespace = $this->cache->get('RKC:NAMESPACE');
+                    break;
+                case self::CLEANING_MODE_CLEAR:
+                    $this->cache->flushdb();
+                    break;
+                case self::CLEANING_MODE_CLEAR_ALL:
+                    $this->cache->flushAll();
                     break;
                 case self::CLEANING_MODE_MATCHING_TAG:
                 case self::CLEANING_MODE_MATCHING_ANY_TAG:
-                    if (count($tags)) {
-                        foreach ($tags as $tag) {
+                    if (\count($tags))
+                    {
+                        foreach ($tags as $tag)
+                        {
                             $this->incrementTag($tag);
-                            if (in_array($tag, $this->delayedKeys)) {
-                                $this->cache->setex("RKC:D:" . $tag, $this->delayedKeysTtl, 1);
+                            if (\in_array($tag, self::DELAYED_KEYS, false))
+                            {
+                                $this->cache->setex('RKC:D:' . $tag, $this->delayedKeysTtl, 1);
                             }
                         }
                     }
@@ -144,57 +141,46 @@ class Redis implements BasicCache
         }
     }
 
-    private function genkey($string, $tags = null)
+    private function genKey($string, $tags = null)
     {
         $tags_str = '_';
         $tags_val = 0;
-        if (is_array($tags) && count($tags)) {
+        if (\is_array($tags) && \count($tags))
+        {
             asort($tags);
-            foreach ($tags as $tag) {
-                if (in_array($tag, $this->delayedKeys)) {
-                    if ($this->cache->get("RKC:D:" . $tag)) {
-                        if (!$this->cache->get("RKC:T:" . $tag)) {
-                            $this->cache->setex("RKC:T:" . $tag, 49, 1);
+            foreach ($tags as $tag)
+            {
+                if (\in_array($tag, self::DELAYED_KEYS, false))
+                {
+                    if ($this->cache->get('RKC:D:' . $tag))
+                    {
+                        if (!$this->cache->get('RKC:T:' . $tag))
+                        {
+                            $this->cache->setex('RKC:T:' . $tag, 49, 1);
                             $this->incrementTag($tag);
                         }
                     }
                 }
+                $tag_mget[] = 'RKC:TAGS:' . $this->prepareString($tag);
                 $tags_str = $tags_str . '_' . $tag;
-                $tags_val = $tags_val . '_' . $this->getTagValue($tag);
             }
+            $tags_val = implode('_', $this->cache->mGet($tag_mget));
         }
 
         $hash_this = $this->prefix . '_keys_' . $string . '_' . $tags_str . '_' . $tags_val;
 
-        $key = 'RKC:' . $this->namespace . ':' . hash('tiger192,3', $hash_this);
-        return $key;
+        return 'RKC:' . $this->namespace . ':' . hash('tiger192,3', $hash_this);
     }
 
     private function incrementTag($tag)
     {
-        $tag = $this->prepare_tag($tag);
-
-        return $this->cache->incr("RKC:TAGS:" . $tag);
+        return $this->cache->incr('RKC:TAGS:' . $this->prepareString($tag));
     }
 
 
-    private function getTagValue($tag)
+    private function prepareString($string)
     {
-        $tag = $this->prepare_tag($tag);
-
-        if (!$newval = $this->cache->get("RKC:TAGS:" . $tag)) {
-            $this->cache->setex("RKC:TAGS:" . $tag, 199999, 1);
-            $newval = 1;
-        } else {
-            $this->cache->expire("RKC:TAGS:" . $tag, 199999);
-        }
-
-        return $newval;
-    }
-
-    private function prepare_tag($tag)
-    {
-        return str_replace(":", ".", $tag);
+        return preg_replace('/\W/', '', $string);
     }
 
     /**
@@ -209,12 +195,12 @@ class Redis implements BasicCache
 
     public function getInstance()
     {
-        if ($this->connected) {
+        if ($this->connected)
+        {
             return $this->cache;
-        } else {
-            return false;
         }
 
+        return false;
     }
 }
 
