@@ -18,8 +18,11 @@
   "license": "GPL-3.0",
   "minimum-stability": "stable",
   "require": {
-    "php": ">=5.5.0",
-    "predis/predis": "^1.0"
+    "php": ">=5.5.0"
+  },
+  "suggest": {
+      "ext-redis": "The extension required to use this package.",
+      "ext-memcached": "The extension required to use this package."
   },
   "autoload": {
     "psr-4": {
