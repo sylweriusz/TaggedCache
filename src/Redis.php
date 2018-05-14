@@ -9,7 +9,6 @@ class Redis implements BasicCache
 {
     const CLEANING_MODE_ALL = 'all'; //very fast, doesn't clear memory
     const CLEANING_MODE_CLEAR = 'clear';
-    const CLEANING_MODE_CLEAR_ALL = 'clearAll';
     const CLEANING_MODE_MATCHING_TAG = 'matchingTag';
     const CLEANING_MODE_MATCHING_ANY_TAG = 'matchingAnyTag';
     const DELAYED_KEYS = ['element', 'elements', 'layout', 'thumb'];
@@ -122,9 +121,6 @@ class Redis implements BasicCache
                     break;
                 case self::CLEANING_MODE_CLEAR:
                     $this->cache->flushdb();
-                    break;
-                case self::CLEANING_MODE_CLEAR_ALL:
-                    $this->cache->flushAll();
                     break;
                 case self::CLEANING_MODE_MATCHING_TAG:
                 case self::CLEANING_MODE_MATCHING_ANY_TAG:
