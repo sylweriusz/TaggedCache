@@ -73,8 +73,11 @@ class Redis implements BasicCache
         {
             $key = $this->genKey($key, $tags);
             $compressed = gzcompress(json_encode($data, JSON_UNESCAPED_UNICODE), 9);
-
-            return $this->cache->setex($key, $timeout, $compressed);
+            try {
+                return $this->cache->setex($key, $timeout, $compressed);
+            } catch (\RedisException $e){
+                return false;
+            }
         }
     }
 
