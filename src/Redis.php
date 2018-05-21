@@ -52,7 +52,6 @@ class Redis implements BasicCache
             $this->cache = new \Redis();
             $this->connected = $this->cache->connect($this->server, 6379, 0.5);
         }
-        $this->cache->setOption(\Redis::OPT_SERIALIZER, \Redis::SERIALIZER_NONE);
         $this->cache->select(4);
     }
 
