@@ -44,8 +44,15 @@ class Redis implements BasicCache
     {
         if (\is_array($this->server) && \count($this->server))
         {
-            $this->cache = new \RedisArray($this->server, ['lazy_connect' => true, 'connect_timeout' => 0.5, 'read_timeout' => 0.5]);
-            $this->connected = true;
+            try
+            {
+                $this->cache = new \RedisArray($this->server, ['lazy_connect' => true, 'connect_timeout' => 0.5, 'read_timeout' => 0.5]);
+                $this->cache->ping();
+                $this->connected = true;
+            } catch (\RedisException $e)
+            {
+                $this->connected = false;
+            }
         }
         else
         {
