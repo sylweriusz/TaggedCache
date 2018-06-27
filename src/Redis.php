@@ -7,18 +7,18 @@ namespace TaggedCache;
  */
 class Redis implements BasicCache
 {
-    const CLEANING_MODE_ALL = 'all'; //very fast, doesn't clear memory
+    const CLEANING_MODE_ALL = 'all'; 
     const CLEANING_MODE_CLEAR = 'clear';
     const CLEANING_MODE_MATCHING_TAG = 'matchingTag';
     const CLEANING_MODE_MATCHING_ANY_TAG = 'matchingAnyTag';
-    const DELAYED_KEYS = ['element', 'elements', 'layout', 'thumb'];
-
-    private $cache = false;
-    private $connected = false;
-    private $namespace = false;
-    private $server ;
-    private $prefix = '';
-    private $delayedKeysTtl = 200;
+    
+    protected $delayedKeys = [];
+    protected $cache = false;
+    protected $connected = false;
+    protected $namespace = false;
+    protected $server ;
+    protected $prefix = '';
+    protected $delayedKeysTtl = 200;
 
     /**
      * TaggedRedisCache constructor.
@@ -40,7 +40,7 @@ class Redis implements BasicCache
         }
     }
 
-    private function connect()
+    protected function connect()
     {
         if (\is_array($this->server) && \count($this->server))
         {
@@ -135,7 +135,7 @@ class Redis implements BasicCache
                         foreach ($tags as $tag)
                         {
                             $this->incrementTag($tag);
-                            if (\in_array($tag, self::DELAYED_KEYS, false))
+                            if (\in_array($tag, self::$delayedKeys, false))
                             {
                                 $this->cache->setex('RKC:D:' . $tag, $this->delayedKeysTtl, 1);
                             }
@@ -146,7 +146,7 @@ class Redis implements BasicCache
         }
     }
 
-    private function genKey($string, $tags = null)
+    protected function genKey($string, $tags = null)
     {
         $tags_str = '_';
         $tags_val = 0;
@@ -155,7 +155,7 @@ class Redis implements BasicCache
             asort($tags);
             foreach ($tags as $tag)
             {
-                if (\in_array($tag, self::DELAYED_KEYS, false))
+                if (\in_array($tag, self::$delayedKeys, false))
                 {
                     if ($this->cache->get('RKC:D:' . $tag))
                     {
@@ -177,13 +177,13 @@ class Redis implements BasicCache
         return 'RKC:' . $this->namespace . ':' . hash('tiger192,3', $hash_this);
     }
 
-    private function incrementTag($tag)
+    protected function incrementTag($tag)
     {
         return $this->cache->incr('RKC:TAGS:' . $this->prepareString($tag));
     }
 
 
-    private function prepareString($string)
+    protected function prepareString($string)
     {
         return preg_replace('/\W/', '', $string);
     }
