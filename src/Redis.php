@@ -135,7 +135,7 @@ class Redis implements BasicCache
                         foreach ($tags as $tag)
                         {
                             $this->incrementTag($tag);
-                            if (\in_array($tag, self::$delayedKeys, false))
+                            if (\in_array($tag, $this->delayedKeys, false))
                             {
                                 $this->cache->setex('RKC:D:' . $tag, $this->delayedKeysTtl, 1);
                             }
@@ -155,7 +155,7 @@ class Redis implements BasicCache
             asort($tags);
             foreach ($tags as $tag)
             {
-                if (\in_array($tag, self::$delayedKeys, false))
+                if (\in_array($tag, $this->delayedKeys, false))
                 {
                     if ($this->cache->get('RKC:D:' . $tag))
                     {
