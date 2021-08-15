@@ -59,7 +59,8 @@ class Redis implements BasicCache
             $this->cache = new \Redis();
             $this->connected = $this->cache->connect($this->server, 6379, 0.5);
         }
-        $this->cache->select(4);
+        if($this->connected)
+            $this->cache->select(4);
     }
 
     /**
