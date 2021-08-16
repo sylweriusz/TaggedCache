@@ -14,7 +14,7 @@ class Redis implements BasicCache
     
     protected $delayedKeys = [];
     protected $cache = false;
-    protected $connected = false;
+    protected $connected = null;
     protected $namespace = false;
     protected $server ;
     protected $prefix = '';
@@ -42,25 +42,27 @@ class Redis implements BasicCache
 
     protected function connect()
     {
-        if (\is_array($this->server) && \count($this->server))
-        {
-            try
+        if (is_null($this->connected)){
+            if (\is_array($this->server) && \count($this->server))
             {
-                $this->cache = new \RedisArray($this->server, ['lazy_connect' => true, 'connect_timeout' => 0.5, 'read_timeout' => 0.5]);
-                $this->cache->ping();
-                $this->connected = true;
-            } catch (\RedisException $e)
-            {
-                $this->connected = false;
+                try
+                {
+                    $this->cache = new \RedisArray($this->server, ['lazy_connect' => true, 'connect_timeout' => 0.5, 'read_timeout' => 0.5]);
+                    $this->cache->ping();
+                    $this->connected = true;
+                } catch (\RedisException $e)
+                {
+                    $this->connected = false;
+                }
             }
+            else
+            {
+                $this->cache = new \Redis();
+                $this->connected = $this->cache->connect($this->server, 6379, 0.5);
+            }
+            if($this->connected)
+                $this->cache->select(4);
         }
-        else
-        {
-            $this->cache = new \Redis();
-            $this->connected = $this->cache->connect($this->server, 6379, 0.5);
-        }
-        if($this->connected)
-            $this->cache->select(4);
     }
 
     /**
