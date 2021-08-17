@@ -55,10 +55,10 @@ class Redis implements BasicCache
                     ]
                 );
                 $this->connected = $this->cache->ping();
-            } catch (\RedisException $e)
+            } catch (\RedisArrayException $e)
             {
                 $this->connected = false;
-                error_log('TaggedCache ERROR: '.$e->getMessage());
+                file_put_contents('php://stderr','TaggedCache ERROR: '.$e->getMessage());
             }
         }
         else
@@ -70,7 +70,7 @@ class Redis implements BasicCache
             } catch (\RedisException $e)
             {
                 $this->connected = false;
-                error_log('TaggedCache ERROR: '.$e->getMessage());
+                file_put_contents('php://stderr','TaggedCache ERROR: '.$e->getMessage());
             }
         }
         if($this->connected)
