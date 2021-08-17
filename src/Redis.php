@@ -7,11 +7,11 @@ namespace TaggedCache;
  */
 class Redis implements BasicCache
 {
-    const CLEANING_MODE_ALL = 'all'; 
+    const CLEANING_MODE_ALL = 'all';
     const CLEANING_MODE_CLEAR = 'clear';
     const CLEANING_MODE_MATCHING_TAG = 'matchingTag';
     const CLEANING_MODE_MATCHING_ANY_TAG = 'matchingAnyTag';
-    
+
     protected $delayedKeys = [];
     protected $cache = false;
     protected $connected = null;
@@ -42,27 +42,39 @@ class Redis implements BasicCache
 
     protected function connect()
     {
-        if (is_null($this->connected)){
-            if (\is_array($this->server) && \count($this->server))
+        if (\is_array($this->server) && \count($this->server))
+        {
+            try
             {
-                try
-                {
-                    $this->cache = new \RedisArray($this->server, ['lazy_connect' => true, 'connect_timeout' => 0.5, 'read_timeout' => 0.5]);
-                    $this->cache->ping();
-                    $this->connected = true;
-                } catch (\RedisException $e)
-                {
-                    $this->connected = false;
-                }
+                $this->cache = new \RedisArray($this->server,
+                    [
+                       'lazy_connect' => false,
+                       'retry_timeout'   => 100,
+                       'read_timeout'    => 1,
+                       'connect_timeout' => 1,
+                    ]
+                );
+                $this->connected = $this->cache->ping();
+            } catch (\RedisException $e)
+            {
+                $this->connected = false;
+                error_log('TaggedCache ERROR: '.$e->getMessage());
             }
-            else
+        }
+        else
+        {
+            try
             {
                 $this->cache = new \Redis();
                 $this->connected = $this->cache->connect($this->server, 6379, 0.5);
+            } catch (\RedisException $e)
+            {
+                $this->connected = false;
+                error_log('TaggedCache ERROR: '.$e->getMessage());
             }
-            if($this->connected)
-                $this->cache->select(4);
         }
+        if($this->connected)
+            $this->cache->select(4);
     }
 
     /**
@@ -151,38 +163,37 @@ class Redis implements BasicCache
 
     protected function genKey($string, $tags = null)
     {
-        $tags_str = '_';
-        $tags_val = 0;
-        if (\is_array($tags) && \count($tags))
-        {
-            asort($tags);
-            foreach ($tags as $tag)
-            {
-                if (\in_array($tag, $this->delayedKeys, false))
-                {
-                    if ($this->cache->get('RKC:D:' . $tag))
-                    {
-                        if (!$this->cache->get('RKC:T:' . $tag))
-                        {
-                            $this->cache->setex('RKC:T:' . $tag, 49, 1);
-                            $this->incrementTag($tag);
+        if ($this->connected) {
+            $tags_str = '_';
+            $tags_val = 0;
+            if (\is_array($tags) && \count($tags)) {
+                asort($tags);
+                foreach ($tags as $tag) {
+                    if (\in_array($tag, $this->delayedKeys, false)) {
+                        if ($this->cache->get('RKC:D:' . $tag)) {
+                            if (!$this->cache->get('RKC:T:' . $tag)) {
+                                $this->cache->setex('RKC:T:' . $tag, 49, 1);
+                                $this->incrementTag($tag);
+                            }
                         }
                     }
+                    $tag_mget[] = 'RKC:TAGS:' . $this->prepareString($tag);
+                    $tags_str   = $tags_str . '_' . $tag;
                 }
-                $tag_mget[] = 'RKC:TAGS:' . $this->prepareString($tag);
-                $tags_str = $tags_str . '_' . $tag;
+                $tags_val = implode('_', $this->cache->mGet($tag_mget));
             }
-            $tags_val = implode('_', $this->cache->mGet($tag_mget));
+
+            $hash_this = $this->prefix . '_keys_' . $string . '_' . $tags_str . '_' . $tags_val;
+
+            return 'RKC:' . $this->namespace . ':' . hash('tiger192,3', $hash_this);
         }
-
-        $hash_this = $this->prefix . '_keys_' . $string . '_' . $tags_str . '_' . $tags_val;
-
-        return 'RKC:' . $this->namespace . ':' . hash('tiger192,3', $hash_this);
     }
 
     protected function incrementTag($tag)
     {
-        return $this->cache->incr('RKC:TAGS:' . $this->prepareString($tag));
+        if ($this->connected) {
+            return $this->cache->incr('RKC:TAGS:' . $this->prepareString($tag));
+        }
     }
 
 
