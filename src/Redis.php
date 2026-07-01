@@ -48,10 +48,10 @@ class Redis implements BasicCache
             {
                 $this->cache = new \RedisArray($this->server,
                     [
-                       'lazy_connect' => false,
+                       'lazy_connect' => true,
                        'retry_timeout'   => 100,
-                       'read_timeout'    => 5,
-                       'connect_timeout' => 5,
+                       'read_timeout'    => 0.5,
+                       'connect_timeout' => 0.3,
                     ]
                 );
                 $this->connected = $this->cache->ping();
